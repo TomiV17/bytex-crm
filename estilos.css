@@ -1,0 +1,158 @@
+/* Reset básico */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Body */
+body {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f3f3f3;
+}
+
+/* Sidebar */
+aside {
+    width: 220px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    /* quitar gap aquí porque usaremos divs dentro del nav */
+}
+
+aside h2 {
+    font-size: 36px;
+    color: #111;
+    margin-bottom: 20px;
+}
+
+/* Nav como contenedor flex vertical */
+aside nav {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+aside nav .menu-links {
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* separación entre links principales */
+}
+
+aside nav .logout {
+    margin-top: auto; /* empuja el logout al fondo */
+}
+
+aside nav a {
+    text-decoration: none;
+    color: #333;
+    padding: 10px;
+    border-radius: 6px;
+    display: block;
+    transition: all 0.2s ease;
+}
+
+aside nav a:hover {
+    background-color: rgba(0, 120, 212, 0.2);
+    color: #0078d4;
+}
+
+
+
+
+/* Contenido principal */
+main {
+    flex: 1;
+    padding: 30px;
+}
+
+/* Secciones */
+section {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(10px);
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Tablas */
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+table th, table td {
+    padding: 10px;
+    text-align: left;
+}
+
+table th {
+    background-color: rgba(0, 120, 212, 0.1);
+    color: #025b9e;
+}
+
+table tr:nth-child(even) {
+    background-color: rgba(0,0,0,0.03);
+}
+
+table tr:hover {
+    background-color: rgba(0, 120, 212, 0.1);
+}
+
+/* Botones */
+button {
+    background-color: #025b9e;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+button:hover {
+    background-color: #023f6e;
+}
+
+/* Links volver */
+a {
+    color: #025b9e;
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+
+/* Estilo de botón para links */
+.button {
+    display: inline-block;
+    background-color: #025b9e;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.button:hover {
+    background-color: #023f6e;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transform: translateY(-1px);
+}
+
+/* Ajusta el tamaño de los gráficos dentro de la sección */
+section canvas {
+    max-width: 250px;   /* ancho máximo */
+    max-height: 100px;  /* alto máximo */
+    width: 80%;         /* ancho relativo al contenedor */
+    height: 50px;       /* mantiene proporción */
+    margin-bottom: 20px; /* separación entre gráficos */
+}
+
