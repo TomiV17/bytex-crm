@@ -3,7 +3,7 @@ session_start();
 include "conexion.php";
 
 if (!isset($_SESSION['usuario_id'])) {
-    header("Location: login.php");
+    header("Location: public/login.php");
     exit;
 }
 
@@ -51,24 +51,71 @@ $stmt->execute();
 $total_interacciones = $stmt->get_result()->fetch_assoc()['total'];
 
 // --- Ganancia última semana ---
-$sql = "SELECT COALESCE(SUM(monto),0) AS total FROM ventas WHERE estado='cerrada' AND fecha_creacion >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
-if (!$is_global) $sql .= " AND empresa_id = ?";
-$stmt = $conexion->prepare($sql);
-if (!$is_global) $stmt->bind_param('i', $empresa_id);
+if ($is_global) {
+    $sql = "
+        SELECT COALESCE(SUM(vd.cantidad * vd.precio_unitario),0) AS total
+        FROM ventas v
+        JOIN ventas_detalle vd ON v.id = vd.venta_id
+        WHERE v.estado='cerrada' 
+          AND v.fecha_creacion >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    ";
+    $stmt = $conexion->prepare($sql);
+} else {
+    $sql = "
+        SELECT COALESCE(SUM(vd.cantidad * vd.precio_unitario),0) AS total
+        FROM ventas v
+        JOIN ventas_detalle vd ON v.id = vd.venta_id
+        WHERE v.estado='cerrada' 
+          AND v.empresa_id = ? 
+          AND v.fecha_creacion >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+    ";
+    $stmt = $conexion->prepare($sql);
+    $stmt->bind_param('i', $empresa_id);
+}
+
 $stmt->execute();
 $ganancia_semana = $stmt->get_result()->fetch_assoc()['total'];
 
+
 // --- Últimas 5 Ventas ---
-$sql = "SELECT v.id, v.producto, v.monto, c.nombre, c.apellido
+if ($is_global) {
+    $sql = "
+        SELECT v.id, 
+            GROUP_CONCAT(CONCAT(p.nombre, ' x', vd.cantidad) SEPARATOR ', ') AS productos,
+            SUM(vd.cantidad * vd.precio_unitario) AS monto_total,
+            c.nombre AS cliente_nombre, c.apellido AS cliente_apellido
         FROM ventas v
-        JOIN clientes c ON v.cliente_id=c.id
-        WHERE v.estado='cerrada'";
-if (!$is_global) $sql .= " AND v.empresa_id = ?";
-$sql .= " ORDER BY v.fecha_creacion DESC LIMIT 5";
-$stmt = $conexion->prepare($sql);
-if (!$is_global) $stmt->bind_param('i', $empresa_id);
+        JOIN clientes c ON v.cliente_id = c.id
+        JOIN ventas_detalle vd ON v.id = vd.venta_id
+        JOIN productos p ON vd.producto_id = p.id
+        WHERE v.estado='cerrada'
+        GROUP BY v.id
+        ORDER BY v.fecha_creacion DESC
+        LIMIT 5
+    ";
+    $stmt = $conexion->prepare($sql);
+} else {
+    $sql = "
+        SELECT v.id, 
+            GROUP_CONCAT(CONCAT(p.nombre, ' x', vd.cantidad) SEPARATOR ', ') AS productos,
+            SUM(vd.cantidad * vd.precio_unitario) AS monto_total,
+            c.nombre AS cliente_nombre, c.apellido AS cliente_apellido
+        FROM ventas v
+        JOIN clientes c ON v.cliente_id = c.id
+        JOIN ventas_detalle vd ON v.id = vd.venta_id
+        JOIN productos p ON vd.producto_id = p.id
+        WHERE v.estado='cerrada' AND v.empresa_id = ?
+        GROUP BY v.id
+        ORDER BY v.fecha_creacion DESC
+        LIMIT 5
+    ";
+    $stmt = $conexion->prepare($sql);
+    $stmt->bind_param('i', $empresa_id);
+}
+
 $stmt->execute();
 $ultimas_ventas = $stmt->get_result();
+
 
 // --- Ventas por estado ---
 $sql = "SELECT estado, COUNT(*) as total FROM ventas";
@@ -100,8 +147,8 @@ while($row = $result->fetch_assoc()) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="estilos.css">
-    <title>CRM - Panel Principal</title>
+    <link rel="stylesheet" href="public/css/estilos.css">
+    <title>Panel Principal</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .cards { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
@@ -115,7 +162,7 @@ while($row = $result->fetch_assoc()) {
 </head>
 <body>
 <aside>
-    <h2>CRM</h2>
+    <h2>Bytex Manager</h2>
     <nav class="menu">
         <button id="btnNotificaciones" class="campana">
             🔔 <span id="contadorNotificaciones">0</span>
@@ -123,16 +170,33 @@ while($row = $result->fetch_assoc()) {
 
         <div class="menu-links">
             <a href="index.php">Panel</a>
-            <a href="clientes.php">Clientes</a>
-            <a href="ventas.php">Ventas</a>
-            <a href="presupuestos.php">Presupuestos</a>
-            <a href="interacciones.php">Interacciones</a>
-            <a href="tareas.php">Tareas</a>
-            <a href="usuarios.php">Usuarios</a>
-            <a href="empresas.php">Empresas</a>
+
+            <!-- Submenu Operaciones -->
+            <button class="submenu-btn">Operaciones ▾</button>
+            <div class="submenu">
+                <a href="src/ventas.php">Ventas</a>
+                <a href="src/productos.php">Productos</a>
+                <a href="src/presupuestos.php">Presupuestos</a>
+            </div>
+
+            <!-- Submenu Gestión -->
+            <button class="submenu-btn">Gestión ▾</button>
+            <div class="submenu">
+                <a href="src/clientes.php">Clientes</a>
+                <a href="src/interacciones.php">Interacciones</a>
+                <a href="src/tareas.php">Tareas</a>
+                <a href="src/proveedores.php">Proveedores</a>
+                <a href="src/compras.php" class="activo">Compras</a>
+                <a href="src/gastos.php">Gastos</a>
+            </div>
+
+            <a href="src/usuarios.php">Usuarios</a>
+            <a href="src/empresas.php">Empresas</a>
+            <a href="src/proveedores.php" class="activo">Proveedores</a>
         </div>
+
         <div class="logout">
-            <a href="logout.php">Cerrar Sesión</a>
+            <a href="public/logout.php">Cerrar Sesión</a>
         </div>
     </nav>
 </aside>
@@ -202,6 +266,23 @@ while($row = $result->fetch_assoc()) {
     font-weight: bold;
     background: #f9f9f9;
 }
+.submenu { display: none; margin-left: 10px; }
+.submenu-btn { 
+    background: none; 
+    border: none; 
+    font-size: 16px; 
+    width: 100%; 
+    text-align: left; 
+    padding: 6px 0; 
+    color: #222225; /* <- esto hace que el texto sea negro */
+}
+.submenu a {
+    display: block;
+    padding: 3px 0;
+    color: #222225; /* texto negro */
+    text-decoration: none; /* opcional: quita el subrayado */
+}
+
 </style>
 
 <main>
@@ -217,17 +298,44 @@ while($row = $result->fetch_assoc()) {
     <section>
         <h2>Últimas 5 Ventas</h2>
         <table>
-            <tr><th>ID</th><th>Producto</th><th>Monto</th><th>Cliente</th></tr>
-            <?php while($row = $ultimas_ventas->fetch_assoc()): ?>
             <tr>
-                <td><?= $row['id'] ?></td>
-                <td><?= $row['producto'] ?></td>
-                <td>$<?= number_format($row['monto'],2) ?></td>
-                <td><?= $row['nombre'].' '.$row['apellido'] ?></td>
+                <th>ID</th>
+                <th>Productos</th>
+                <th>Monto Total</th>
+                <th>Cliente</th>
             </tr>
-            <?php endwhile; ?>
+            <?php 
+            // Query para traer últimas 5 ventas con productos y monto total
+            $ultimas_ventas_query = "
+            SELECT v.id, 
+                GROUP_CONCAT(CONCAT(p.nombre, ' x', vd.cantidad) SEPARATOR ', ') AS productos,
+                SUM(vd.cantidad * vd.precio_unitario) AS monto_total,
+                c.nombre AS cliente_nombre, c.apellido AS cliente_apellido
+            FROM ventas v
+            JOIN clientes c ON v.cliente_id = c.id
+            JOIN ventas_detalle vd ON v.id = vd.venta_id
+            JOIN productos p ON vd.producto_id = p.id
+            GROUP BY v.id
+            ORDER BY v.fecha_creacion DESC
+            LIMIT 5
+            ";
+            $ultimas_ventas = $conexion->query($ultimas_ventas_query);
+
+            if($ultimas_ventas && $ultimas_ventas->num_rows > 0):
+                while($row = $ultimas_ventas->fetch_assoc()): ?>
+                <tr>
+                    <td><?= $row['id'] ?></td>
+                    <td><?= $row['productos'] ?></td>
+                    <td>$<?= number_format($row['monto_total'], 2) ?></td>
+                    <td><?= $row['cliente_nombre'].' '.$row['cliente_apellido'] ?></td>
+                </tr>
+                <?php endwhile;
+            else: ?>
+                <tr><td colspan="4" style="text-align:center;">No hay ventas</td></tr>
+            <?php endif; ?>
         </table>
     </section>
+
 
     <div class="charts">
         <div class="chart-container">
@@ -321,6 +429,12 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // Carga inicial
     cargarNotificaciones();
+});
+document.querySelectorAll('.submenu-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const submenu = btn.nextElementSibling;
+        submenu.style.display = submenu.style.display === 'block' ? 'none' : 'block';
+    });
 });
 </script>
 </main>
